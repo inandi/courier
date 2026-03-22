@@ -18,6 +18,7 @@ import {
   moveToArchive,
   isInArchive,
 } from '../utils/fileUtils';
+import { confirmFiles, createShipStatusBar } from '../utils/uiUtils';
 
 export interface ShipResult {
   file: string;
@@ -25,39 +26,6 @@ export interface ShipResult {
   url?: string;
   issueNumber?: number;
   error?: string;
-}
-
-// ---------------------------------------------------------------------------
-// Confirmation — QuickPick multi-select
-// ---------------------------------------------------------------------------
-
-/**
- * Show a QuickPick listing every candidate file.
- * The user can deselect individual files before confirming.
- * Returns the confirmed subset, or null if the user cancelled.
- */
-async function confirmFiles(
-  fileUris: vscode.Uri[]
-): Promise<vscode.Uri[] | null> {
-  const items = fileUris.map((uri) => ({
-    label: `$(markdown) ${path.basename(uri.fsPath)}`,
-    description: vscode.workspace.asRelativePath(uri.fsPath),
-    uri,
-    picked: true,
-  }));
-
-  const picked = await vscode.window.showQuickPick(items, {
-    canPickMany: true,
-    title: 'Courier — Create GitHub Issues',
-    placeHolder: `${fileUris.length} file(s) found. Deselect any you want to skip, then press Enter.`,
-  });
-
-  if (!picked) return null; // user pressed Escape
-  if (picked.length === 0) {
-    vscode.window.showInformationMessage('Courier: No files selected.');
-    return null;
-  }
-  return picked.map((item) => item.uri);
 }
 
 // ---------------------------------------------------------------------------
@@ -98,13 +66,7 @@ async function shipFiles(
   const results: ShipResult[] = [];
 
   // Status bar spinner — visible for the entire background run.
-  const statusBar = vscode.window.createStatusBarItem(
-    vscode.StatusBarAlignment.Left,
-    100
-  );
-  statusBar.text = `$(sync~spin) Courier: shipping ${fileUris.length} file(s)…`;
-  statusBar.tooltip = `Creating ${fileUris.length} GitHub issue(s) in ${repo.owner}/${repo.repo}`;
-  statusBar.show();
+  const statusBar = createShipStatusBar(`shipping ${fileUris.length} file(s)…`);
 
   try {
     for (const uri of fileUris) {
@@ -222,8 +184,7 @@ export async function shipFolderToGitHub(context: vscode.ExtensionContext) {
     return;
   }
 
-  // Let the user confirm / deselect files before we do anything.
-  const confirmed = await confirmFiles(found);
+  const confirmed = await confirmFiles(found, 'Courier — Create GitHub Issues');
   if (!confirmed) return;
 
   const workspaceRoot = vscode.workspace.getWorkspaceFolder(folderUri)!.uri.fsPath;
@@ -250,7 +211,7 @@ export async function shipSelectedFiles(context: vscode.ExtensionContext) {
   if (!files?.length) return;
 
   // Let the user confirm / deselect before shipping.
-  const confirmed = await confirmFiles(files);
+  const confirmed = await confirmFiles(files, 'Courier — Create GitHub Issues');
   if (!confirmed) return;
 
   const workspaceFolder = vscode.workspace.getWorkspaceFolder(files[0]);
@@ -282,9 +243,7 @@ export async function shipFilesFromExplorer(
     return;
   }
 
-  // Even for a single file, show a one-item confirmation so the user always
-  // has a chance to abort.
-  const confirmed = await confirmFiles([resource]);
+  const confirmed = await confirmFiles([resource], 'Courier — Create GitHub Issue');
   if (!confirmed) return;
 
   const workspaceRoot = workspaceFolder.uri.fsPath;

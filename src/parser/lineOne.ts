@@ -5,12 +5,20 @@
 export interface ParsedDraft {
   title: string;
   body: string;
+  // GitHub fields
   /** GitHub labels to apply (from frontmatter). */
   labels?: string[];
   /** GitHub usernames to assign (from frontmatter). */
   assignees?: string[];
   /** GitHub milestone number (from frontmatter). */
   milestone?: number;
+  // Jira fields
+  /** Jira project key, e.g. "PROJ" (from frontmatter). */
+  project?: string;
+  /** Jira issue type name, e.g. "Story" (from frontmatter). */
+  issuetype?: string;
+  /** Jira priority name, e.g. "High" (from frontmatter). */
+  priority?: string;
 }
 
 /**

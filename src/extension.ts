@@ -1,5 +1,5 @@
 /**
- * Courier - Ship GitHub issues from .md files
+ * Courier - Ship GitHub issues and Jira tickets from .md files
  */
 
 import * as vscode from 'vscode';
@@ -9,8 +9,17 @@ import {
   shipFilesFromExplorer,
 } from './commands/shipToGitHub';
 import { promptForGitHubToken } from './providers/githubProvider';
+import {
+  shipFolderToJira,
+  shipSelectedFilesToJira,
+  shipFileToJiraFromExplorer,
+  promptAndSaveJiraCredentials,
+} from './commands/shipToJira';
 
 export function activate(context: vscode.ExtensionContext) {
+  // -------------------------------------------------------------------------
+  // GitHub commands
+  // -------------------------------------------------------------------------
   context.subscriptions.push(
     vscode.commands.registerCommand(
       'courier.shipFolderToGitHub',
@@ -28,19 +37,51 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand(
       'courier.shipFilesFromExplorer',
-      (resource: vscode.Uri) => {
-        shipFilesFromExplorer(context, resource);
-      }
+      (resource: vscode.Uri) => shipFilesFromExplorer(context, resource)
     )
   );
 
-  // Sign in via VS Code GitHub OAuth or store a PAT as fallback.
   context.subscriptions.push(
     vscode.commands.registerCommand('courier.configureGitHubToken', async () => {
       const token = await promptForGitHubToken(context);
       if (token) {
         vscode.window.showInformationMessage(
           'Courier: GitHub authentication configured successfully.'
+        );
+      }
+    })
+  );
+
+  // -------------------------------------------------------------------------
+  // Jira commands
+  // -------------------------------------------------------------------------
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'courier.shipFolderToJira',
+      () => shipFolderToJira(context)
+    )
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'courier.shipSelectedFilesToJira',
+      () => shipSelectedFilesToJira(context)
+    )
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'courier.shipFileToJiraFromExplorer',
+      (resource: vscode.Uri) => shipFileToJiraFromExplorer(context, resource)
+    )
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('courier.configureJira', async () => {
+      const creds = await promptAndSaveJiraCredentials(context);
+      if (creds) {
+        vscode.window.showInformationMessage(
+          'Courier: Jira credentials saved successfully.'
         );
       }
     })

@@ -5,21 +5,29 @@
  *
  *   ---
  *   labels: bug, enhancement
- *   assignees: alice, bob
- *   milestone: 3
+ *   assignees: alice, bob        (GitHub usernames)
+ *   assignee: dev@company.com   (Jira email / username — singular also accepted)
+ *   milestone: 3                 (GitHub milestone number)
+ *   project: PROJ                (Jira project key)
+ *   issuetype: Story             (Jira issue type)
+ *   priority: High               (Jira priority)
  *   ---
  *
  *   Issue title here
  *   Body...
  *
  * All fields are optional. Labels and assignees are comma-separated strings.
- * Milestone is a GitHub milestone number (integer).
  */
 
 export interface FrontmatterData {
+  // Shared / GitHub
   labels?: string[];
   assignees?: string[];
   milestone?: number;
+  // Jira-specific
+  project?: string;
+  issuetype?: string;
+  priority?: string;
 }
 
 export interface FrontmatterResult {
@@ -79,6 +87,17 @@ function parseFrontmatterBlock(block: string): FrontmatterData {
         if (!isNaN(n)) data.milestone = n;
         break;
       }
+      case 'project':
+        data.project = value;
+        break;
+      case 'issuetype':
+      case 'issue_type':
+      case 'type':
+        data.issuetype = value;
+        break;
+      case 'priority':
+        data.priority = value;
+        break;
       default:
         break;
     }

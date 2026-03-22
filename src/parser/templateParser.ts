@@ -71,7 +71,6 @@ export function parseWithTemplate(content: string, template: CourierTemplate): P
   if (template.type === 'lineOne') {
     draft = parseLineOne(body);
   } else {
-    // Future: frontmatter, heading, sections
     draft = parseLineOne(body);
   }
 
@@ -81,6 +80,9 @@ export function parseWithTemplate(content: string, template: CourierTemplate): P
   if (data.labels?.length) draft.labels = data.labels;
   if (data.assignees?.length) draft.assignees = data.assignees;
   if (data.milestone !== undefined) draft.milestone = data.milestone;
+  if (data.project) draft.project = data.project;
+  if (data.issuetype) draft.issuetype = data.issuetype;
+  if (data.priority) draft.priority = data.priority;
 
   return draft;
 }

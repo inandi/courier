@@ -1,10 +1,10 @@
 {
   "name": "courier",
   "displayName": "Courier",
-  "description": "Ship GitHub issues from .md files directly in VS Code",
-  "version": "0.1.0",
+  "description": "Ship GitHub issues and Jira tickets from .md files directly in VS Code",
+  "version": "1.1.1",
   "engines": {
-    "vscode": "^1.85.0"
+    "vscode": "^1.74.0"
   },
   "categories": [
     "Other"
@@ -13,7 +13,11 @@
     "onCommand:courier.shipFolderToGitHub",
     "onCommand:courier.shipSelectedFiles",
     "onCommand:courier.shipFilesFromExplorer",
-    "onCommand:courier.configureGitHubToken"
+    "onCommand:courier.configureGitHubToken",
+    "onCommand:courier.shipFolderToJira",
+    "onCommand:courier.shipSelectedFilesToJira",
+    "onCommand:courier.shipFileToJiraFromExplorer",
+    "onCommand:courier.configureJira"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -33,6 +37,22 @@
       {
         "command": "courier.configureGitHubToken",
         "title": "Courier: Sign in to GitHub"
+      },
+      {
+        "command": "courier.shipFolderToJira",
+        "title": "Courier: Ship Folder to Jira"
+      },
+      {
+        "command": "courier.shipSelectedFilesToJira",
+        "title": "Courier: Ship Selected Files to Jira"
+      },
+      {
+        "command": "courier.shipFileToJiraFromExplorer",
+        "title": "Courier: Ship to Jira"
+      },
+      {
+        "command": "courier.configureJira",
+        "title": "Courier: Configure Jira"
       }
     ],
     "menus": {
@@ -41,6 +61,11 @@
           "command": "courier.shipFilesFromExplorer",
           "when": "explorerResourceIsFolder == false && resourceExtname == .md",
           "group": "courier@1"
+        },
+        {
+          "command": "courier.shipFileToJiraFromExplorer",
+          "when": "explorerResourceIsFolder == false && resourceExtname == .md",
+          "group": "courier@2"
         }
       ]
     },
@@ -73,6 +98,21 @@
           "type": "string",
           "default": "",
           "description": "Override GitHub repo (owner/repo). Leave empty to infer from .git/config remote origin."
+        },
+        "courier.jira.baseUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Jira Cloud instance URL (e.g. https://mycompany.atlassian.net)"
+        },
+        "courier.jira.defaultProject": {
+          "type": "string",
+          "default": "",
+          "description": "Default Jira project key (e.g. PROJ). Leave empty to be prompted per run."
+        },
+        "courier.jira.defaultIssueType": {
+          "type": "string",
+          "default": "Task",
+          "description": "Default Jira issue type (e.g. Task, Story, Bug). Leave empty to be prompted per run."
         }
       }
     }

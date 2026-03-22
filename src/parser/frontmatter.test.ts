@@ -127,4 +127,53 @@ describe('parseFrontmatter', () => {
     expect(data.labels).toEqual(['bug']);
     expect((data as Record<string, unknown>).unknown).toBeUndefined();
   });
+
+  // -------------------------------------------------------------------------
+  // Jira-specific fields
+  // -------------------------------------------------------------------------
+  it('parses a Jira project key', () => {
+    const input = '---\nproject: PROJ\n---\nTitle';
+    const { data } = parseFrontmatter(input);
+    expect(data.project).toBe('PROJ');
+  });
+
+  it('parses an issue type', () => {
+    const input = '---\nissuetype: Story\n---\nTitle';
+    const { data } = parseFrontmatter(input);
+    expect(data.issuetype).toBe('Story');
+  });
+
+  it('accepts "type" as alias for issuetype', () => {
+    const input = '---\ntype: Bug\n---\nTitle';
+    const { data } = parseFrontmatter(input);
+    expect(data.issuetype).toBe('Bug');
+  });
+
+  it('parses a priority', () => {
+    const input = '---\npriority: High\n---\nTitle';
+    const { data } = parseFrontmatter(input);
+    expect(data.priority).toBe('High');
+  });
+
+  it('parses a full Jira frontmatter block', () => {
+    const input = [
+      '---',
+      'project: ACME',
+      'issuetype: Story',
+      'priority: Medium',
+      'labels: backend',
+      'assignee: dev@company.com',
+      '---',
+      '',
+      'Implement rate limiting',
+    ].join('\n');
+
+    const { data, content } = parseFrontmatter(input);
+    expect(data.project).toBe('ACME');
+    expect(data.issuetype).toBe('Story');
+    expect(data.priority).toBe('Medium');
+    expect(data.labels).toEqual(['backend']);
+    expect(data.assignees).toEqual(['dev@company.com']);
+    expect(content).toContain('Implement rate limiting');
+  });
 });
