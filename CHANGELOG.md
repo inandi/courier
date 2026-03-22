@@ -1,3 +1,22 @@
+# Release v1.1.5 - 2026-03-22
+
+## Improvements
+- Command Palette titles enhanced with VS Code codicons: `$(github)` for GitHub commands, `$(rocket)` for Jira commands, `$(key)` for sign-in, and `$(settings-gear)` for Jira configuration
+- Extension package name updated to `inandi-courier` for VS Code Marketplace uniqueness, matching the `iNandi` publisher convention
+- `package.json` enriched with `publisher`, `author` (name, email, URL), `repository`, and `icon` fields required for Marketplace publishing
+- Context-menu group updated to `7_modification@100` / `7_modification@101` to align with VS Code's standard file-modification group ordering
+- Full JSDoc documentation added across all 11 source files — every file, exported interface, and function now carries `@author`, `@since`, `@version`, `@copyright`, `@param`, and `@returns` tags
+- Outdated phase-based spec documents removed from `_doc/`; replaced with comprehensive `doc/TECHNICAL.md` (architecture, modules, data flows, config, security, testing, build) and `doc/PROCESS.md` (dev setup, conventions, adding features, debugging, release checklist)
+- README rewritten with a structured layout: problem/solution intro, getting started guides for GitHub and Jira, frontmatter examples, archive diagram, commands table, configuration reference, tips, and development section
+- `.vscodeignore` added to exclude source, tests, and dev files from the packaged `.vsix`, keeping the published extension lean
+- Jest + `ts-jest` test infrastructure added; 51 unit tests across 4 suites covering `parseLineOne`, `parseFrontmatter`, `parseGitHubRemoteUrl`, `normalizeBaseUrl`, and `buildIssueUrl`
+- `@types/node` version style aligned to `20.x` to match project conventions
+
+## Bug Fixes
+- Fixed `Array.some()` used with an async callback in `shipToJira.ts` pre-scan — `some()` does not await Promises, so the predicate always evaluated to `true` (a resolved Promise is truthy), causing the project/issue-type QuickPick to always appear even when every file already specified its own `project:` in frontmatter. Replaced with `Promise.all` + a synchronous `some` check on the resolved drafts.
+
+---
+
 # Release v1.1.4 - 2026-03-22
 
 ## New Features
