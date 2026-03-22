@@ -1,3 +1,10 @@
+# Release v1.1.7 - 2026-03-22
+
+## Improvements
+- Extension display name updated to `Courier - Ticket` to resolve VS Code Marketplace naming conflict — the name `Courier` and subsequent alternatives were already taken
+
+---
+
 # Release v1.1.5 - 2026-03-22
 
 ## Improvements
