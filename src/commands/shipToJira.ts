@@ -161,11 +161,14 @@ async function shipFilesToJira(
   let sessionIssueType: string | undefined;
 
   // Pre-scan: check if any file needs a project/issue-type prompt.
-  const needsProjectPrompt = fileUris.some(async (uri) => {
-    const content = await readFileContent(uri);
-    const draft = parseWithTemplate(content, template);
-    return !draft?.project;
-  });
+  // Must use Promise.all because Array.some() does not await async callbacks.
+  const preScanDrafts = await Promise.all(
+    fileUris.map(async (uri) => {
+      const content = await readFileContent(uri);
+      return parseWithTemplate(content, template);
+    })
+  );
+  const needsProjectPrompt = preScanDrafts.some((draft) => !draft?.project);
 
   if (needsProjectPrompt) {
     const resolved = await resolveJiraProject(creds, undefined, undefined);
