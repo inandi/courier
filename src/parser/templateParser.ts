@@ -6,6 +6,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { parseLineOne, ParsedDraft } from './lineOne';
+import { parseFrontmatter } from './frontmatter';
 
 export interface CourierTemplate {
   type: string;
@@ -61,12 +62,25 @@ function resolveUserDefaultTemplate(): CourierTemplate | null {
 
 /**
  * Parse .md content using the resolved template.
- * Currently only supports LineOne; other types fall back to LineOne.
+ * Frontmatter (---) is always stripped first and its metadata merged into the result.
  */
 export function parseWithTemplate(content: string, template: CourierTemplate): ParsedDraft | null {
+  const { data, content: body } = parseFrontmatter(content);
+
+  let draft: ParsedDraft | null;
   if (template.type === 'lineOne') {
-    return parseLineOne(content);
+    draft = parseLineOne(body);
+  } else {
+    // Future: frontmatter, heading, sections
+    draft = parseLineOne(body);
   }
-  // Future: frontmatter, heading, sections
-  return parseLineOne(content);
+
+  if (!draft) return null;
+
+  // Merge frontmatter metadata into the parsed draft.
+  if (data.labels?.length) draft.labels = data.labels;
+  if (data.assignees?.length) draft.assignees = data.assignees;
+  if (data.milestone !== undefined) draft.milestone = data.milestone;
+
+  return draft;
 }

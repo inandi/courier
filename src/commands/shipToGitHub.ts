@@ -2,15 +2,15 @@
  * Ship .md files to GitHub as issues
  */
 
+import * as path from 'path';
 import * as vscode from 'vscode';
 import { resolveTemplate, parseWithTemplate, ParsedDraft } from '../parser';
 import {
-  isGhAuthenticated,
-  createIssueViaGh,
   createIssueViaApi,
   getGitHubToken,
   resolveRepo,
   CreateIssueResult,
+  IssueMetadata,
 } from '../providers/githubProvider';
 import {
   findMdFiles,
@@ -23,27 +23,64 @@ export interface ShipResult {
   file: string;
   success: boolean;
   url?: string;
+  issueNumber?: number;
   error?: string;
 }
+
+// ---------------------------------------------------------------------------
+// Confirmation — QuickPick multi-select
+// ---------------------------------------------------------------------------
+
+/**
+ * Show a QuickPick listing every candidate file.
+ * The user can deselect individual files before confirming.
+ * Returns the confirmed subset, or null if the user cancelled.
+ */
+async function confirmFiles(
+  fileUris: vscode.Uri[]
+): Promise<vscode.Uri[] | null> {
+  const items = fileUris.map((uri) => ({
+    label: `$(markdown) ${path.basename(uri.fsPath)}`,
+    description: vscode.workspace.asRelativePath(uri.fsPath),
+    uri,
+    picked: true,
+  }));
+
+  const picked = await vscode.window.showQuickPick(items, {
+    canPickMany: true,
+    title: 'Courier — Create GitHub Issues',
+    placeHolder: `${fileUris.length} file(s) found. Deselect any you want to skip, then press Enter.`,
+  });
+
+  if (!picked) return null; // user pressed Escape
+  if (picked.length === 0) {
+    vscode.window.showInformationMessage('Courier: No files selected.');
+    return null;
+  }
+  return picked.map((item) => item.uri);
+}
+
+// ---------------------------------------------------------------------------
+// Core shipping logic
+// ---------------------------------------------------------------------------
 
 async function createIssue(
   repo: { owner: string; repo: string },
   draft: ParsedDraft,
-  workspaceRoot: string,
   context: vscode.ExtensionContext
 ): Promise<CreateIssueResult> {
-  const useGh = await isGhAuthenticated();
-  if (useGh) {
-    return createIssueViaGh(repo, draft.title, draft.body, workspaceRoot);
-  }
-
   const token = await getGitHubToken(context);
   if (!token) {
     throw new Error(
-      'GitHub token required. Run "Courier: Configure GitHub Token" or install and authenticate gh CLI.'
+      'Not authenticated with GitHub. Sign in via the "Courier: Sign in to GitHub" command, or run "Courier: Configure GitHub Token" to store a Personal Access Token.'
     );
   }
-  return createIssueViaApi(repo, draft.title, draft.body, token);
+  const meta: IssueMetadata = {
+    labels: draft.labels,
+    assignees: draft.assignees,
+    milestone: draft.milestone,
+  };
+  return createIssueViaApi(repo, draft.title, draft.body, token, meta);
 }
 
 async function shipFiles(
@@ -60,64 +97,99 @@ async function shipFiles(
   const template = resolveTemplate(workspaceRoot);
   const results: ShipResult[] = [];
 
-  for (const uri of fileUris) {
-    if (isInArchive(uri, workspaceRoot)) {
-      results.push({
-        file: uri.fsPath,
-        success: false,
-        error: 'File is already in archive (already shipped)',
-      });
-      continue;
-    }
+  // Status bar spinner — visible for the entire background run.
+  const statusBar = vscode.window.createStatusBarItem(
+    vscode.StatusBarAlignment.Left,
+    100
+  );
+  statusBar.text = `$(sync~spin) Courier: shipping ${fileUris.length} file(s)…`;
+  statusBar.tooltip = `Creating ${fileUris.length} GitHub issue(s) in ${repo.owner}/${repo.repo}`;
+  statusBar.show();
 
-    try {
-      const content = await readFileContent(uri);
-      const draft = parseWithTemplate(content, template);
-      if (!draft) {
+  try {
+    for (const uri of fileUris) {
+      const fileName = path.basename(uri.fsPath);
+      statusBar.text = `$(sync~spin) Courier: ${fileName}…`;
+
+      if (isInArchive(uri, workspaceRoot)) {
         results.push({
           file: uri.fsPath,
           success: false,
-          error: 'Empty or invalid file',
+          error: 'Already shipped (file is in archive)',
         });
         continue;
       }
 
-      const issue = await createIssue(repo, draft, workspaceRoot, context);
-      await moveToArchive(uri, workspaceRoot, issue.url);
-      results.push({
-        file: uri.fsPath,
-        success: true,
-        url: issue.url,
-      });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      results.push({
-        file: uri.fsPath,
-        success: false,
-        error: msg,
-      });
+      try {
+        const content = await readFileContent(uri);
+        const draft = parseWithTemplate(content, template);
+        if (!draft) {
+          results.push({
+            file: uri.fsPath,
+            success: false,
+            error: 'Empty or invalid file — skipped',
+          });
+          continue;
+        }
+
+        const issue = await createIssue(repo, draft, context);
+        await moveToArchive(uri, workspaceRoot, issue.url);
+        results.push({
+          file: uri.fsPath,
+          success: true,
+          url: issue.url,
+          issueNumber: issue.number,
+        });
+      } catch (err) {
+        results.push({
+          file: uri.fsPath,
+          success: false,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
     }
+  } finally {
+    statusBar.dispose();
   }
 
   return results;
 }
 
-function showSummary(results: ShipResult[]) {
+// ---------------------------------------------------------------------------
+// Summary notification
+// ---------------------------------------------------------------------------
+
+function showSummary(results: ShipResult[], repoSlug: string) {
   const succeeded = results.filter((r) => r.success);
   const failed = results.filter((r) => !r.success);
 
   if (succeeded.length > 0) {
-    vscode.window.showInformationMessage(
-      `Courier: Shipped ${succeeded.length} file(s) to GitHub. ${succeeded.map((r) => r.url).join(', ')}`
-    );
+    const links = succeeded
+      .map((r) => `#${r.issueNumber}`)
+      .join(', ');
+    vscode.window
+      .showInformationMessage(
+        `Courier: ${succeeded.length} issue(s) created in ${repoSlug} — ${links}`,
+        'Open on GitHub'
+      )
+      .then((action) => {
+        if (action === 'Open on GitHub' && succeeded[0].url) {
+          vscode.env.openExternal(vscode.Uri.parse(succeeded[0].url));
+        }
+      });
   }
+
   if (failed.length > 0) {
-    const details = failed.map((r) => `${r.file}: ${r.error}`).join('\n');
+    const details = failed.map((r) => `• ${path.basename(r.file)}: ${r.error}`).join('\n');
     vscode.window.showErrorMessage(
-      `Courier: ${failed.length} file(s) failed:\n${details}`
+      `Courier: ${failed.length} file(s) failed.\n${details}`
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Entry points
+// ---------------------------------------------------------------------------
 
 export async function shipFolderToGitHub(context: vscode.ExtensionContext) {
   const workspaceFolders = vscode.workspace.workspaceFolders;
@@ -141,19 +213,25 @@ export async function shipFolderToGitHub(context: vscode.ExtensionContext) {
 
   const config = vscode.workspace.getConfiguration('courier');
   const pattern = config.get<string>('filePattern') ?? '**/*.md';
-  const files = await findMdFiles(folderUri, pattern);
+  const found = await findMdFiles(folderUri, pattern);
 
-  if (files.length === 0) {
+  if (found.length === 0) {
     vscode.window.showInformationMessage(
       `Courier: No .md files found in ${folderUri.fsPath}`
     );
     return;
   }
 
-  const workspaceRoot = vscode.workspace.getWorkspaceFolder(folderUri)!.uri
-    .fsPath;
-  const results = await shipFiles(files, workspaceRoot, context);
-  showSummary(results);
+  // Let the user confirm / deselect files before we do anything.
+  const confirmed = await confirmFiles(found);
+  if (!confirmed) return;
+
+  const workspaceRoot = vscode.workspace.getWorkspaceFolder(folderUri)!.uri.fsPath;
+  const repo = await resolveRepo(workspaceRoot, context);
+  const repoSlug = repo ? `${repo.owner}/${repo.repo}` : 'GitHub';
+
+  const results = await shipFiles(confirmed, workspaceRoot, context);
+  showSummary(results, repoSlug);
 }
 
 export async function shipSelectedFiles(context: vscode.ExtensionContext) {
@@ -171,14 +249,22 @@ export async function shipSelectedFiles(context: vscode.ExtensionContext) {
 
   if (!files?.length) return;
 
+  // Let the user confirm / deselect before shipping.
+  const confirmed = await confirmFiles(files);
+  if (!confirmed) return;
+
   const workspaceFolder = vscode.workspace.getWorkspaceFolder(files[0]);
-  const workspaceRoot = workspaceFolder?.uri.fsPath ?? workspaceFolders[0].uri.fsPath;
-  const results = await shipFiles(files, workspaceRoot, context);
-  showSummary(results);
+  const workspaceRoot =
+    workspaceFolder?.uri.fsPath ?? workspaceFolders[0].uri.fsPath;
+  const repo = await resolveRepo(workspaceRoot, context);
+  const repoSlug = repo ? `${repo.owner}/${repo.repo}` : 'GitHub';
+
+  const results = await shipFiles(confirmed, workspaceRoot, context);
+  showSummary(results, repoSlug);
 }
 
 /**
- * Ship file from explorer context menu (right-click). Receives the right-clicked resource.
+ * Ship file from the explorer context menu (right-click on a .md file).
  */
 export async function shipFilesFromExplorer(
   context: vscode.ExtensionContext,
@@ -196,10 +282,15 @@ export async function shipFilesFromExplorer(
     return;
   }
 
-  const results = await shipFiles(
-    [resource],
-    workspaceFolder.uri.fsPath,
-    context
-  );
-  showSummary(results);
+  // Even for a single file, show a one-item confirmation so the user always
+  // has a chance to abort.
+  const confirmed = await confirmFiles([resource]);
+  if (!confirmed) return;
+
+  const workspaceRoot = workspaceFolder.uri.fsPath;
+  const repo = await resolveRepo(workspaceRoot, context);
+  const repoSlug = repo ? `${repo.owner}/${repo.repo}` : 'GitHub';
+
+  const results = await shipFiles(confirmed, workspaceRoot, context);
+  showSummary(results, repoSlug);
 }

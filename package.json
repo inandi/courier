@@ -1,7 +1,7 @@
 {
   "name": "courier",
   "displayName": "Courier",
-  "description": "Ship GitHub issues, Jira tickets, and Slack notifications from .md files directly in VS Code",
+  "description": "Ship GitHub issues from .md files directly in VS Code",
   "version": "0.1.0",
   "engines": {
     "vscode": "^1.85.0"
@@ -32,7 +32,7 @@
       },
       {
         "command": "courier.configureGitHubToken",
-        "title": "Courier: Configure GitHub Token"
+        "title": "Courier: Sign in to GitHub"
       }
     ],
     "menus": {
@@ -64,13 +64,15 @@
         },
         "courier.defaultTemplate": {
           "type": "object",
-          "default": { "type": "lineOne" },
+          "default": {
+            "type": "lineOne"
+          },
           "description": "Fallback template when no project template exists"
         },
         "courier.github.repo": {
           "type": "string",
           "default": "",
-          "description": "Override GitHub repo (owner/repo). Leave empty to infer from gh or git."
+          "description": "Override GitHub repo (owner/repo). Leave empty to infer from .git/config remote origin."
         }
       }
     }
@@ -78,11 +80,15 @@
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./"
+    "watch": "tsc -watch -p ./",
+    "test": "jest"
   },
   "devDependencies": {
+    "@types/jest": "^30.0.0",
     "@types/node": "^20.10.0",
     "@types/vscode": "^1.85.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.4.6",
     "typescript": "^5.3.0"
   },
   "dependencies": {

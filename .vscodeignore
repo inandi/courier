@@ -1,0 +1,35 @@
+.vscode/**
+.vscode-test/**
+src/**
+.gitignore
+tsconfig.json
+**/*.map
+**/*.ts
+!out/**/*.js
+
+# Development and release files
+dev.md
+release.sh
+release.md
+release.md.sample
+version.md
+
+# Documentation (keep README.md)
+doc/**
+
+# Publishing secrets
+.publish-secrets
+.publish-secrets.sample
+
+# Package files
+*.vsix
+package-lock.json
+
+# Git files
+.git/**
+.gitignore
+.gitattributes
+
+# Node modules (should already be excluded, but explicit)
+node_modules/**
+

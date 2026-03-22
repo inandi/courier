@@ -1,18 +1,16 @@
 # Courier — Documentation
 
-Epics and user stories for the Courier VS Code extension, organized by phase.
+Epics and user stories for the Courier VS Code extension.
 
-## Phases
+## Phase 1: GitHub Foundation
 
-| Phase | Document | Focus |
-|-------|----------|-------|
-| 1 | [phase-1-github-foundation.md](phase-1-github-foundation.md) | GitHub issues from .md files, template parsing, archive |
-| 2 | [phase-2-jira-integration.md](phase-2-jira-integration.md) | Jira tickets, auth, project/issue-type selection |
-| 3 | [phase-3-notification-hub.md](phase-3-notification-hub.md) | Multi-post relay, Slack webhooks, status dashboard |
+| Document | Focus |
+|----------|-------|
+| [phase-1-github-foundation.md](phase-1-github-foundation.md) | GitHub issues from .md files, template parsing, archive |
 
 ## Overview
 
-Courier creates GitHub issues, Jira tickets, or Slack notifications directly from VS Code using Markdown (.md) files. Each project can define its own template for parsing .md content.
+Courier creates GitHub issues directly from VS Code using Markdown (.md) files. Each project can define its own template for parsing .md content.
 
 ## Usage
 

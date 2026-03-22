@@ -5,6 +5,12 @@
 export interface ParsedDraft {
   title: string;
   body: string;
+  /** GitHub labels to apply (from frontmatter). */
+  labels?: string[];
+  /** GitHub usernames to assign (from frontmatter). */
+  assignees?: string[];
+  /** GitHub milestone number (from frontmatter). */
+  milestone?: number;
 }
 
 /**
@@ -13,14 +19,14 @@ export interface ParsedDraft {
  */
 export function parseLineOne(content: string): ParsedDraft | null {
   const lines = content.split(/\r?\n/).map((l) => l.trim());
-  const nonEmpty = lines.filter((l) => l.length > 0);
+  const firstIdx = lines.findIndex((l) => l.length > 0);
 
-  if (nonEmpty.length === 0) {
+  if (firstIdx === -1) {
     return null;
   }
 
-  const title = nonEmpty[0];
-  const body = nonEmpty.slice(1).join('\n');
+  const title = lines[firstIdx];
+  const body = lines.slice(firstIdx + 1).join('\n').trim();
 
   return { title, body };
 }

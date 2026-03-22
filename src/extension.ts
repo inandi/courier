@@ -1,5 +1,5 @@
 /**
- * Courier - Ship GitHub issues, Jira tickets, Slack notifications from .md files
+ * Courier - Ship GitHub issues from .md files
  */
 
 import * as vscode from 'vscode';
@@ -8,6 +8,7 @@ import {
   shipSelectedFiles,
   shipFilesFromExplorer,
 } from './commands/shipToGitHub';
+import { promptForGitHubToken } from './providers/githubProvider';
 
 export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
@@ -33,19 +34,13 @@ export function activate(context: vscode.ExtensionContext) {
     )
   );
 
+  // Sign in via VS Code GitHub OAuth or store a PAT as fallback.
   context.subscriptions.push(
     vscode.commands.registerCommand('courier.configureGitHubToken', async () => {
-      const token = await vscode.window.showInputBox({
-        prompt: 'Enter your GitHub Personal Access Token',
-        password: true,
-        placeHolder: 'ghp_xxxxxxxxxxxx',
-        validateInput: (v) =>
-          v.trim().length > 0 ? null : 'Token is required',
-      });
+      const token = await promptForGitHubToken(context);
       if (token) {
-        await context.secrets.store('courier.github.token', token.trim());
         vscode.window.showInformationMessage(
-          'Courier: GitHub token stored securely.'
+          'Courier: GitHub authentication configured successfully.'
         );
       }
     })

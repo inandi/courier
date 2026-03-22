@@ -17,11 +17,11 @@
 **So that** I can build and debug Courier locally
 
 **Acceptance Criteria:**
-- [ ] Extension structure with `package.json`, `tsconfig.json`, `extension.ts`
-- [ ] `engines.vscode` ~1.85+
-- [ ] Activation on command
-- [ ] Folder structure: `src/extension.ts`, `src/parser/`, `src/providers/`, `src/commands/`, `src/utils/`
-- [ ] Extension runs in Extension Development Host
+- [x] Extension structure with `package.json`, `tsconfig.json`, `extension.ts`
+- [x] `engines.vscode` ~1.85+
+- [x] Activation on command
+- [x] Folder structure: `src/extension.ts`, `src/parser/`, `src/providers/`, `src/commands/`, `src/utils/`
+- [x] Extension runs in Extension Development Host
 
 ---
 
@@ -32,9 +32,9 @@
 **So that** different projects can use different .md formats
 
 **Acceptance Criteria:**
-- [ ] Resolve template from `.vscode/courier.template.json` or `courier.template.json` at workspace root
-- [ ] Fall back to user setting `courier.defaultTemplate` if no project template
-- [ ] Fall back to built-in LineOne if no template found
+- [x] Resolve template from `.vscode/courier.template.json` or `courier.template.json` at workspace root
+- [x] Fall back to user setting `courier.defaultTemplate` if no project template
+- [x] Fall back to built-in LineOne if no template found
 - [ ] Log which template was used (optional, for debugging)
 
 ---
@@ -46,12 +46,12 @@
 **So that** I can use a simple, predictable format for drafts
 
 **Acceptance Criteria:**
-- [ ] Input: .md file path or content
-- [ ] Output: `{ title: string, body: string }`
-- [ ] First non-empty line = title; remaining lines = body (trimmed)
-- [ ] Empty file → skip or return error
-- [ ] Single-line file → body = empty string
-- [ ] Unit tests for edge cases
+- [x] Input: .md file path or content
+- [x] Output: `{ title: string, body: string }`
+- [x] First non-empty line = title; remaining lines = body (trimmed)
+- [x] Empty file → skip or return error
+- [x] Single-line file → body = empty string
+- [x] Unit tests for edge cases
 
 ---
 
@@ -62,13 +62,13 @@
 **So that** I can bulk-create issues from a drafts folder
 
 **Acceptance Criteria:**
-- [ ] Command: "Courier: Ship Folder to GitHub"
-- [ ] Prompts for folder (or uses `vscode.workspace.workspaceFolders`)
-- [ ] Scans folder for .md files per `courier.filePattern` glob
-- [ ] Parses each file with resolved template
-- [ ] Creates GitHub issue for each file (title, body)
-- [ ] Shows progress notification during bulk creation
-- [ ] Displays success/failure summary
+- [x] Command: "Courier: Ship Folder to GitHub"
+- [x] Prompts for folder (or uses `vscode.workspace.workspaceFolders`)
+- [x] Scans folder for .md files per `courier.filePattern` glob
+- [x] Parses each file with resolved template
+- [x] Creates GitHub issue for each file (title, body)
+- [x] Shows progress notification during bulk creation
+- [x] Displays success/failure summary
 
 ---
 
@@ -79,40 +79,43 @@
 **So that** I can ship only the drafts I choose
 
 **Acceptance Criteria:**
-- [ ] Command: "Courier: Ship Selected Files"
-- [ ] Multi-select .md files from explorer or file picker
-- [ ] Parses each selected file with resolved template
-- [ ] Creates GitHub issue for each file
-- [ ] Shows progress and summary
+- [x] Command: "Courier: Ship Selected Files"
+- [x] Multi-select .md files from explorer or file picker
+- [x] Parses each selected file with resolved template
+- [x] Creates GitHub issue for each file
+- [x] Shows progress and summary
 
 ---
 
 ### US-1.6: GitHub Integration via gh CLI
 
-**As a** developer with GitHub CLI installed  
-**I want** Courier to use my existing `gh` authentication  
-**So that** I don't need to configure a token separately
+> **Superseded** — Courier no longer depends on the `gh` CLI. Authentication is handled
+> entirely through VS Code's built-in GitHub OAuth provider and optional PAT storage.
+> The acceptance criteria below are met by the new implementation.
+
+**As a** developer  
+**I want** Courier to authenticate with GitHub without external tools  
+**So that** I can create issues from any machine
 
 **Acceptance Criteria:**
-- [ ] Check `gh auth status` before creating issues
-- [ ] Use `gh issue create --title "..." --body "..."` via `child_process.exec`
-- [ ] Infer repo from `gh repo view` when in a git repo
-- [ ] If not authenticated, show clear error with setup instructions
+- [x] Check authentication before creating issues
+- [x] Create issues via GitHub REST API
+- [x] Infer repo from `.git/config` remote origin when in a git repo
+- [x] If not authenticated, show clear error with setup instructions
 
 ---
 
-### US-1.7: GitHub Integration via Octokit (Fallback)
+### US-1.7: GitHub Integration via Octokit
 
-**As a** developer without gh CLI or preferring API  
-**I want** Courier to use a GitHub token (from `gh auth token` or manual)  
+**As a** developer  
+**I want** Courier to use a GitHub token (from VS Code OAuth or manual PAT)  
 **So that** I can still create issues
 
 **Acceptance Criteria:**
-- [ ] Fallback when gh CLI not available or not authenticated
-- [ ] Try `gh auth token` first for token
-- [ ] Option to store manual token via SecretStorage
-- [ ] Use Octokit.js `issues.create` with owner/repo
-- [ ] Command or setting to configure token
+- [x] VS Code built-in GitHub OAuth session used as primary auth
+- [x] Option to store manual PAT via SecretStorage
+- [x] Use `Octokit.rest.issues.create` with owner/repo
+- [x] Command to configure token / sign in
 
 ---
 
@@ -123,10 +126,10 @@
 **So that** I never double-post and have a traceable history
 
 **Acceptance Criteria:**
-- [ ] On success: move file to `_courier_processed/<timestamp>/<filename>`
-- [ ] Configurable via `courier.archiveFolder`
-- [ ] Skip files already in archive (idempotency)
-- [ ] Optional: JSON sidecar mapping filename → issue URL
+- [x] On success: move file to `_courier_processed/<timestamp>/<filename>`
+- [x] Configurable via `courier.archiveFolder`
+- [x] Skip files already in archive (idempotency)
+- [x] Optional: JSON sidecar mapping filename → issue URL
 
 ---
 
@@ -137,9 +140,9 @@
 **So that** I can adapt Courier to my project structure
 
 **Acceptance Criteria:**
-- [ ] `courier.sourceFolder` — default folder to scan
-- [ ] `courier.archiveFolder` — processed archive path
-- [ ] `courier.filePattern` — glob for .md files (default: `**/*.md`)
-- [ ] `courier.defaultTemplate` — fallback template
-- [ ] `courier.github.repo` — override owner/repo
-- [ ] Settings visible in VS Code Settings UI
+- [x] `courier.sourceFolder` — default folder to scan
+- [x] `courier.archiveFolder` — processed archive path
+- [x] `courier.filePattern` — glob for .md files (default: `**/*.md`)
+- [x] `courier.defaultTemplate` — fallback template
+- [x] `courier.github.repo` — override owner/repo
+- [x] Settings visible in VS Code Settings UI
