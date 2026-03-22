@@ -1,5 +1,16 @@
 /**
- * Shared VS Code UI helpers used by multiple ship commands.
+ * Courier UI Utilities
+ *
+ * Shared VS Code user-interface helpers used by both the GitHub and Jira
+ * ship commands. Centralising these components avoids code duplication and
+ * ensures a consistent look and feel across all shipping flows:
+ * a multi-select QuickPick for file confirmation and a status bar spinner
+ * for background operations.
+ *
+ * @author Gobinda Nandi <gobinda.nandi.public@gmail.com>
+ * @since 1.1.1 [22-03-2026]
+ * @version 1.1.1
+ * @copyright (c) 2026 Gobinda Nandi
  */
 
 import * as path from 'path';
@@ -10,9 +21,15 @@ import * as vscode from 'vscode';
 // ---------------------------------------------------------------------------
 
 /**
- * Show a QuickPick listing every candidate file with all items pre-selected.
- * The user can deselect individual files before confirming.
- * Returns the confirmed subset, or null if the user cancelled.
+ * Presents a multi-select QuickPick listing every candidate `.md` file with
+ * all items pre-checked. The user can deselect individual files before
+ * pressing Enter to confirm. Returns the confirmed subset of URIs, or null
+ * when the user presses Escape or deselects everything.
+ *
+ * @param {vscode.Uri[]} fileUris - Candidate file URIs to display in the picker
+ * @param {string} [title] - Optional QuickPick title shown at the top of the panel
+ * @returns {Promise<vscode.Uri[] | null>} Selected file URIs, or null if cancelled
+ * @version 1.1.1
  */
 export async function confirmFiles(
   fileUris: vscode.Uri[],
@@ -44,12 +61,22 @@ export async function confirmFiles(
 // ---------------------------------------------------------------------------
 
 /**
- * Create and immediately show a status bar spinner.
- * Caller is responsible for disposing it when the operation completes.
+ * Creates and immediately shows a spinning status bar item at the left side
+ * of the VS Code status bar to communicate that a background operation is in
+ * progress. The caller is responsible for calling `dispose()` when the
+ * operation completes so the spinner is removed.
  *
  * @example
  * const bar = createShipStatusBar('Shipping 3 files…');
- * try { ... } finally { bar.dispose(); }
+ * try {
+ *   await doLongOperation();
+ * } finally {
+ *   bar.dispose();
+ * }
+ *
+ * @param {string} message - Short description appended to the "Courier:" prefix
+ * @returns {vscode.StatusBarItem} The active status bar item (must be disposed by caller)
+ * @version 1.1.1
  */
 export function createShipStatusBar(message: string): vscode.StatusBarItem {
   const item = vscode.window.createStatusBarItem(

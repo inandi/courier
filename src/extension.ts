@@ -1,5 +1,14 @@
 /**
- * Courier - Ship GitHub issues and Jira tickets from .md files
+ * Courier Extension Main Module
+ *
+ * VS Code extension that ships Markdown (.md) draft files as GitHub issues
+ * or Jira tickets directly from the editor. Registers all commands for both
+ * platforms and wires them to their respective handlers.
+ *
+ * @author Gobinda Nandi <gobinda.nandi.public@gmail.com>
+ * @since 1.1.1 [22-03-2026]
+ * @version 1.1.1
+ * @copyright (c) 2026 Gobinda Nandi
  */
 
 import * as vscode from 'vscode';
@@ -16,10 +25,21 @@ import {
   promptAndSaveJiraCredentials,
 } from './commands/shipToJira';
 
-export function activate(context: vscode.ExtensionContext) {
+/**
+ * Activates the Courier extension.
+ * Registers all GitHub and Jira ship commands and binds them to their
+ * respective handlers. Each command is pushed to context.subscriptions so
+ * VS Code disposes them automatically on deactivation.
+ *
+ * @param {vscode.ExtensionContext} context - The VS Code extension context
+ * @returns {void}
+ * @version 1.1.1
+ */
+export function activate(context: vscode.ExtensionContext): void {
   // -------------------------------------------------------------------------
   // GitHub commands
   // -------------------------------------------------------------------------
+
   context.subscriptions.push(
     vscode.commands.registerCommand(
       'courier.shipFolderToGitHub',
@@ -55,6 +75,7 @@ export function activate(context: vscode.ExtensionContext) {
   // -------------------------------------------------------------------------
   // Jira commands
   // -------------------------------------------------------------------------
+
   context.subscriptions.push(
     vscode.commands.registerCommand(
       'courier.shipFolderToJira',
@@ -88,4 +109,12 @@ export function activate(context: vscode.ExtensionContext) {
   );
 }
 
-export function deactivate() {}
+/**
+ * Deactivates the Courier extension.
+ * No explicit cleanup is required — all command subscriptions registered
+ * in activate() are disposed automatically by VS Code.
+ *
+ * @returns {void}
+ * @version 1.1.1
+ */
+export function deactivate(): void {}

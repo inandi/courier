@@ -1,5 +1,19 @@
 /**
- * Ship .md files to Jira as tickets
+ * Courier Ship-to-Jira Command
+ *
+ * Implements the three Jira ticket-creation entry points exposed to VS Code:
+ * shipping all `.md` files in a folder, shipping a user-selected set of files
+ * via an open dialog, and shipping a single file right-clicked in the Explorer.
+ * Also provides the interactive credential-setup flow used by the
+ * `courier.configureJira` command. All shipping paths converge on the shared
+ * `shipFilesToJira` core function which resolves project/issue-type once per
+ * batch, creates each ticket via the Jira REST API, archives the source file,
+ * and reports a summary notification.
+ *
+ * @author Gobinda Nandi <gobinda.nandi.public@gmail.com>
+ * @since 1.1.1 [22-03-2026]
+ * @version 1.1.1
+ * @copyright (c) 2026 Gobinda Nandi
  */
 
 import * as path from 'path';
@@ -22,11 +36,23 @@ import {
 } from '../utils/fileUtils';
 import { confirmFiles, createShipStatusBar } from '../utils/uiUtils';
 
+/**
+ * Represents the outcome of attempting to ship a single `.md` file to Jira.
+ * Accumulated into an array by the core shipping function and consumed by
+ * the summary notification helper.
+ *
+ * @version 1.1.1
+ */
 export interface ShipJiraResult {
+  /** Absolute path of the source file. */
   file: string;
+  /** True when the Jira ticket was created and the file was archived. */
   success: boolean;
+  /** Jira issue key in `PROJECT-123` format (populated on success). */
   key?: string;
+  /** Browser URL of the created ticket (populated on success). */
   url?: string;
+  /** Human-readable error description (populated on failure). */
   error?: string;
 }
 
@@ -35,8 +61,16 @@ export interface ShipJiraResult {
 // ---------------------------------------------------------------------------
 
 /**
- * Interactively prompt for Jira credentials, validate them, and store on success.
- * Returns the valid credentials or null if the user cancelled.
+ * Interactively guides the user through setting up Jira credentials.
+ * Prompts for the Jira base URL, account email, and API token via three
+ * sequential InputBox dialogs. Validates the credentials against the
+ * `/rest/api/2/myself` endpoint before persisting them to VS Code's
+ * SecretStorage and global settings. Returns null when the user cancels any
+ * step or when validation fails.
+ *
+ * @param {vscode.ExtensionContext} context - VS Code extension context for credential storage
+ * @returns {Promise<JiraCredentials | null>} The validated and saved credentials, or null
+ * @version 1.1.1
  */
 export async function promptAndSaveJiraCredentials(
   context: vscode.ExtensionContext
@@ -88,6 +122,20 @@ export async function promptAndSaveJiraCredentials(
 // Core shipping logic
 // ---------------------------------------------------------------------------
 
+/**
+ * Processes an array of `.md` file URIs: retrieves (or prompts for) Jira
+ * credentials, resolves a session-level project key and issue type once for
+ * all files that do not specify their own via frontmatter, then iterates
+ * through each file — parsing, creating a Jira ticket, and archiving.
+ * A spinning status bar item is shown throughout. Files already archived or
+ * that cannot be parsed are recorded as failures without halting the batch.
+ *
+ * @param {vscode.Uri[]} fileUris - Confirmed `.md` files to ship
+ * @param {string} workspaceRoot - Absolute path to the workspace root folder
+ * @param {vscode.ExtensionContext} context - VS Code extension context
+ * @returns {Promise<ShipJiraResult[]>} Per-file results including success/failure details
+ * @version 1.1.1
+ */
 async function shipFilesToJira(
   fileUris: vscode.Uri[],
   workspaceRoot: string,
@@ -195,10 +243,20 @@ async function shipFilesToJira(
 }
 
 // ---------------------------------------------------------------------------
-// Summary
+// Summary notification
 // ---------------------------------------------------------------------------
 
-function showJiraSummary(results: ShipJiraResult[]) {
+/**
+ * Displays a VS Code notification summarising the completed Jira ship operation.
+ * Successful tickets are listed by their issue key with an "Open in Browser"
+ * action. Failures are shown in a separate error message listing the file name
+ * and error detail for each.
+ *
+ * @param {ShipJiraResult[]} results - Per-file results from the ship operation
+ * @returns {void}
+ * @version 1.1.1
+ */
+function showJiraSummary(results: ShipJiraResult[]): void {
   const succeeded = results.filter((r) => r.success);
   const failed = results.filter((r) => !r.success);
 
@@ -226,7 +284,17 @@ function showJiraSummary(results: ShipJiraResult[]) {
 // Entry points
 // ---------------------------------------------------------------------------
 
-export async function shipFolderToJira(context: vscode.ExtensionContext) {
+/**
+ * Entry point for the `courier.shipFolderToJira` command.
+ * Scans the workspace source folder (or the root when `courier.sourceFolder`
+ * is unset) for `.md` files matching `courier.filePattern`, presents a
+ * multi-select QuickPick for confirmation, then ships the selected files.
+ *
+ * @param {vscode.ExtensionContext} context - VS Code extension context
+ * @returns {Promise<void>}
+ * @version 1.1.1
+ */
+export async function shipFolderToJira(context: vscode.ExtensionContext): Promise<void> {
   const workspaceFolders = vscode.workspace.workspaceFolders;
   if (!workspaceFolders?.length) {
     vscode.window.showErrorMessage('Courier: No workspace folder open.');
@@ -263,7 +331,16 @@ export async function shipFolderToJira(context: vscode.ExtensionContext) {
   showJiraSummary(results);
 }
 
-export async function shipSelectedFilesToJira(context: vscode.ExtensionContext) {
+/**
+ * Entry point for the `courier.shipSelectedFilesToJira` command.
+ * Opens a file picker filtered to `.md` files, presents the selection in a
+ * confirmation QuickPick, and ships the confirmed files to Jira.
+ *
+ * @param {vscode.ExtensionContext} context - VS Code extension context
+ * @returns {Promise<void>}
+ * @version 1.1.1
+ */
+export async function shipSelectedFilesToJira(context: vscode.ExtensionContext): Promise<void> {
   const workspaceFolders = vscode.workspace.workspaceFolders;
   if (!workspaceFolders?.length) {
     vscode.window.showErrorMessage('Courier: No workspace folder open.');
@@ -287,10 +364,20 @@ export async function shipSelectedFilesToJira(context: vscode.ExtensionContext) 
   showJiraSummary(results);
 }
 
+/**
+ * Entry point for the `courier.shipFileToJiraFromExplorer` command.
+ * Triggered via the Explorer context menu when the user right-clicks a `.md`
+ * file. Shows a single-item confirmation QuickPick then ships the file to Jira.
+ *
+ * @param {vscode.ExtensionContext} context - VS Code extension context
+ * @param {vscode.Uri} resource - URI of the file activated from the Explorer
+ * @returns {Promise<void>}
+ * @version 1.1.1
+ */
 export async function shipFileToJiraFromExplorer(
   context: vscode.ExtensionContext,
   resource: vscode.Uri
-) {
+): Promise<void> {
   if (!resource.fsPath.endsWith('.md')) {
     vscode.window.showWarningMessage('Courier: Select a .md file to ship.');
     return;
