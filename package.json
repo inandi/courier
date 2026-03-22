@@ -1,0 +1,156 @@
+{
+  "name": "inandi-courier",
+  "displayName": "Courier - Ticket",
+  "description": "Ship GitHub issues and Jira tickets from .md files directly in VS Code",
+  "version": "1.1.7",
+  "publisher": "iNandi",
+  "icon": "media/logo.jpg",
+  "author": {
+    "name": "Gobinda Nandi",
+    "email": "gobinda.nandi.public@gmail.com",
+    "url": "https://inandi.github.io/portfolio/index.html"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/inandi/courier.git"
+  },
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:courier.shipFolderToGitHub",
+    "onCommand:courier.shipSelectedFiles",
+    "onCommand:courier.shipFilesFromExplorer",
+    "onCommand:courier.configureGitHubToken",
+    "onCommand:courier.shipFolderToJira",
+    "onCommand:courier.shipSelectedFilesToJira",
+    "onCommand:courier.shipFileToJiraFromExplorer",
+    "onCommand:courier.configureJira"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "courier.shipFolderToGitHub",
+        "title": "$(github) Ship Folder to GitHub",
+        "category": "Courier"
+      },
+      {
+        "command": "courier.shipSelectedFiles",
+        "title": "$(github) Ship Selected Files to GitHub",
+        "category": "Courier"
+      },
+      {
+        "command": "courier.shipFilesFromExplorer",
+        "title": "$(github) Ship to GitHub",
+        "category": "Courier"
+      },
+      {
+        "command": "courier.configureGitHubToken",
+        "title": "$(key) Sign in to GitHub",
+        "category": "Courier"
+      },
+      {
+        "command": "courier.shipFolderToJira",
+        "title": "$(rocket) Ship Folder to Jira",
+        "category": "Courier"
+      },
+      {
+        "command": "courier.shipSelectedFilesToJira",
+        "title": "$(rocket) Ship Selected Files to Jira",
+        "category": "Courier"
+      },
+      {
+        "command": "courier.shipFileToJiraFromExplorer",
+        "title": "$(rocket) Ship to Jira",
+        "category": "Courier"
+      },
+      {
+        "command": "courier.configureJira",
+        "title": "$(settings-gear) Configure Jira",
+        "category": "Courier"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "courier.shipFilesFromExplorer",
+          "when": "explorerResourceIsFolder == false && resourceExtname == .md",
+          "group": "7_modification@100"
+        },
+        {
+          "command": "courier.shipFileToJiraFromExplorer",
+          "when": "explorerResourceIsFolder == false && resourceExtname == .md",
+          "group": "7_modification@101"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Courier",
+      "properties": {
+        "courier.sourceFolder": {
+          "type": "string",
+          "default": "",
+          "description": "Default folder to scan for draft .md files (e.g. drafts)"
+        },
+        "courier.archiveFolder": {
+          "type": "string",
+          "default": "_courier_processed",
+          "description": "Folder for processed/shipped files"
+        },
+        "courier.filePattern": {
+          "type": "string",
+          "default": "**/*.md",
+          "description": "Glob pattern for draft .md files"
+        },
+        "courier.defaultTemplate": {
+          "type": "object",
+          "default": {
+            "type": "lineOne"
+          },
+          "description": "Fallback template when no project template exists"
+        },
+        "courier.github.repo": {
+          "type": "string",
+          "default": "",
+          "description": "Override GitHub repo (owner/repo). Leave empty to infer from .git/config remote origin."
+        },
+        "courier.jira.baseUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Jira Cloud instance URL (e.g. https://mycompany.atlassian.net)"
+        },
+        "courier.jira.defaultProject": {
+          "type": "string",
+          "default": "",
+          "description": "Default Jira project key (e.g. PROJ). Leave empty to be prompted per run."
+        },
+        "courier.jira.defaultIssueType": {
+          "type": "string",
+          "default": "Task",
+          "description": "Default Jira issue type (e.g. Task, Story, Bug). Leave empty to be prompted per run."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "test": "jest"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/node": "20.x",
+    "@types/vscode": "^1.74.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.4.6",
+    "typescript": "^5.3.0"
+  },
+  "dependencies": {
+    "octokit": "^3.0.0"
+  }
+}
