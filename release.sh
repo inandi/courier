@@ -1,5 +1,12 @@
 #!/bin/bash
 
+# Publishes to two separate registries (both must succeed for users on VSCodium / Open VSX):
+# - Visual Studio Marketplace: @vscode/vsce
+# - Open VSX Registry: ovsx
+# Tokens: VSCE_PAT and OVSX_PAT in .publish-secrets (see .publish-secrets.sample).
+
+set -o pipefail
+
 # Check if the version number is passed as an argument
 if [ -z "$1" ]; then
   echo "Error: No version number provided."
@@ -20,6 +27,22 @@ read -p "Are you sure you want to proceed? (yes/no): " CONFIRMATION
 if [ "$CONFIRMATION" != "yes" ]; then
   echo "Release process aborted."
   exit 0
+fi
+
+# Ensure package.json version matches the release (bump it before running this script)
+if ! command -v node >/dev/null 2>&1; then
+  echo "Error: node is required to read package.json version."
+  exit 1
+fi
+PKG_VERSION=$(node -p "require('./package.json').version" 2>/dev/null)
+if [ -z "$PKG_VERSION" ]; then
+  echo "Error: Could not read version from package.json."
+  exit 1
+fi
+if [ "$PKG_VERSION" != "$VERSION" ]; then
+  echo "Error: package.json version ($PKG_VERSION) does not match release argument ($VERSION)."
+  echo "Set \"version\" in package.json to $VERSION, then run this script again."
+  exit 1
 fi
 
 # Get the Git user
@@ -76,38 +99,61 @@ git push origin v$VERSION
 # Step 7: Publish to VS Code Marketplace and Open VSX Registry
 echo "Publishing extension to marketplaces..."
 
+PUBLISH_FAILED=0
+PUBLISH_ATTEMPTED=0
+
+publish_marketplace() {
+  echo "Publishing to Visual Studio Marketplace..."
+  if npx --yes @vscode/vsce publish -p "$VSCE_PAT"; then
+    echo "✓ Successfully published to Visual Studio Marketplace"
+  else
+    echo "✗ Failed to publish to Visual Studio Marketplace"
+    return 1
+  fi
+}
+
+publish_open_vsx() {
+  echo "Publishing to Open VSX Registry..."
+  if npx --yes ovsx publish -p "$OVSX_PAT"; then
+    echo "✓ Successfully published to Open VSX Registry"
+  else
+    echo "✗ Failed to publish to Open VSX Registry"
+    return 1
+  fi
+}
+
 # Load secrets from .publish-secrets file
 if [ -f ".publish-secrets" ]; then
-    echo "Loading publishing secrets..."
-    # Source the secrets file to load environment variables
-    set -a
-    source .publish-secrets
-    set +a
-    
-    # Check if tokens are loaded
-    if [ -z "$OVSX_PAT" ] || [ -z "$VSCE_PAT" ]; then
-        echo "Warning: Publishing tokens not found in .publish-secrets file."
-        echo "Skipping publishing. Please check .publish-secrets.sample for format."
-    else
-        # Publish to VS Code Marketplace
-        echo "Publishing to VS Code Marketplace..."
-        if vsce publish -p "$VSCE_PAT"; then
-            echo "✓ Successfully published to VS Code Marketplace"
-        else
-            echo "✗ Failed to publish to VS Code Marketplace"
-        fi
-        
-        # Publish to Open VSX Registry
-        echo "Publishing to Open VSX Registry..."
-        if ovsx publish -p "$OVSX_PAT"; then
-            echo "✓ Successfully published to Open VSX Registry"
-        else
-            echo "✗ Failed to publish to Open VSX Registry"
-        fi
-    fi
+  echo "Loading publishing secrets..."
+  set -a
+  # shellcheck source=/dev/null
+  source .publish-secrets
+  set +a
+
+  if [ -n "$VSCE_PAT" ] && [ -n "$OVSX_PAT" ]; then
+    PUBLISH_ATTEMPTED=1
+    publish_marketplace || PUBLISH_FAILED=1
+    publish_open_vsx || PUBLISH_FAILED=1
+  elif [ -n "$VSCE_PAT" ]; then
+    echo "Note: OVSX_PAT not set — skipping Open VSX (VSCodium users will not see updates until you publish there)."
+    PUBLISH_ATTEMPTED=1
+    publish_marketplace || PUBLISH_FAILED=1
+  elif [ -n "$OVSX_PAT" ]; then
+    echo "Note: VSCE_PAT not set — skipping Visual Studio Marketplace."
+    PUBLISH_ATTEMPTED=1
+    publish_open_vsx || PUBLISH_FAILED=1
+  else
+    echo "Warning: Neither VSCE_PAT nor OVSX_PAT found in .publish-secrets."
+    echo "Skipping publishing. See .publish-secrets.sample."
+  fi
 else
-    echo "Warning: .publish-secrets file not found."
-    echo "Skipping publishing. Create .publish-secrets from .publish-secrets.sample and add your tokens."
+  echo "Warning: .publish-secrets file not found."
+  echo "Skipping publishing. Create .publish-secrets from .publish-secrets.sample and add your tokens."
+fi
+
+if [ "$PUBLISH_ATTEMPTED" -eq 1 ] && [ "$PUBLISH_FAILED" -eq 1 ]; then
+  echo "Release tagging finished, but one or more publish steps failed."
+  exit 1
 fi
 
 echo "Release process completed successfully."
