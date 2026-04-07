@@ -1,3 +1,15 @@
+# Release v2.1.1 - 2026-04-07
+
+## Improvements
+- `preview` flag added to `package.json` — marks the extension as a preview release on the VS Code Marketplace
+- Dependencies in `package-lock.json` upgraded for improved compatibility and security
+- Release script (`release.sh`) enhanced to publish to both VS Code Marketplace and Open VSX Registry in a single run
+- Version validation added to release script — verifies the release tag matches the `version` field in `package.json` before publishing
+- Error handling improved in release script for missing or invalid publishing tokens
+- Documentation comments in `release.sh` updated for clarity
+
+---
+
 # Release v1.1.7 - 2026-03-22
 
 ## Improvements
